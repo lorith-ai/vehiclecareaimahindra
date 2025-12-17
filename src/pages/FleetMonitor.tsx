@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   Search,
@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { vehicles } from '@/lib/mockData';
+import { useSimulation } from '@/contexts/SimulationContext';
 import { cn } from '@/lib/utils';
 
 const statusConfig = {
@@ -36,12 +36,16 @@ const statusConfig = {
 export default function FleetMonitor() {
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   const [searchTerm, setSearchTerm] = useState('');
+  const { getVehicles, state } = useSimulation();
+  const vehicles = getVehicles();
 
-  const filteredVehicles = vehicles.filter((v) =>
-    v.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    v.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    v.city.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredVehicles = useMemo(() => {
+    return vehicles.filter((v) =>
+      v.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      v.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      v.city.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [vehicles, searchTerm]);
 
   return (
     <div className="space-y-6">
@@ -120,12 +124,21 @@ export default function FleetMonitor() {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredVehicles.map((vehicle, index) => (
           <motion.div
-            key={vehicle.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05 * index }}
-            className="bg-card rounded-xl border shadow-sm hover:shadow-lg transition-shadow overflow-hidden"
+            key={`${vehicle.id}-${state.lastUpdate}`}
+            initial={false}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+            className="bg-card rounded-xl border shadow-sm hover:shadow-lg transition-all overflow-hidden relative"
           >
+            {/* Real-time indicator */}
+            {state.isRunning && (
+              <motion.div
+                animate={{ opacity: [0.3, 0.6, 0.3] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="absolute top-2 right-2 w-2 h-2 rounded-full bg-success z-10"
+                title="Live data"
+              />
+            )}
             {/* Header */}
             <div className="p-4 border-b border-border bg-muted/30">
               <div className="flex items-center justify-between">
@@ -173,7 +186,15 @@ export default function FleetMonitor() {
                     />
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-xl font-bold">{vehicle.healthScore}</span>
+                    <motion.span
+                      key={`health-${vehicle.id}-${vehicle.healthScore}`}
+                      initial={{ scale: 1.3 }}
+                      animate={{ scale: 1 }}
+                      transition={{ duration: 0.3 }}
+                      className="text-xl font-bold"
+                    >
+                      {vehicle.healthScore}
+                    </motion.span>
                   </div>
                 </div>
                 <div className="flex-1">
@@ -196,7 +217,19 @@ export default function FleetMonitor() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Engine</p>
-                  <p className="text-sm font-medium">{vehicle.sensors.engineTemp}°C</p>
+                  <motion.p
+                    key={`temp-${vehicle.id}-${vehicle.sensors.engineTemp}`}
+                    initial={{ scale: 1.2, color: 'var(--primary)' }}
+                    animate={{ scale: 1, color: 'inherit' }}
+                    transition={{ duration: 0.3 }}
+                    className={cn(
+                      'text-sm font-medium',
+                      vehicle.sensors.engineTemp > 100 && 'text-destructive',
+                      vehicle.sensors.engineTemp > 95 && vehicle.sensors.engineTemp <= 100 && 'text-warning'
+                    )}
+                  >
+                    {vehicle.sensors.engineTemp.toFixed(1)}°C
+                  </motion.p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -205,7 +238,19 @@ export default function FleetMonitor() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Brake</p>
-                  <p className="text-sm font-medium">{vehicle.sensors.brakeWear}%</p>
+                  <motion.p
+                    key={`brake-${vehicle.id}-${vehicle.sensors.brakeWear}`}
+                    initial={{ scale: 1.2, color: 'var(--primary)' }}
+                    animate={{ scale: 1, color: 'inherit' }}
+                    transition={{ duration: 0.3 }}
+                    className={cn(
+                      'text-sm font-medium',
+                      vehicle.sensors.brakeWear > 80 && 'text-destructive',
+                      vehicle.sensors.brakeWear > 60 && vehicle.sensors.brakeWear <= 80 && 'text-warning'
+                    )}
+                  >
+                    {vehicle.sensors.brakeWear.toFixed(1)}%
+                  </motion.p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -214,7 +259,19 @@ export default function FleetMonitor() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Battery</p>
-                  <p className="text-sm font-medium">{vehicle.sensors.battery}V</p>
+                  <motion.p
+                    key={`battery-${vehicle.id}-${vehicle.sensors.battery}`}
+                    initial={{ scale: 1.2, color: 'var(--primary)' }}
+                    animate={{ scale: 1, color: 'inherit' }}
+                    transition={{ duration: 0.3 }}
+                    className={cn(
+                      'text-sm font-medium',
+                      vehicle.sensors.battery < 12.2 && 'text-destructive',
+                      vehicle.sensors.battery < 12.3 && vehicle.sensors.battery >= 12.2 && 'text-warning'
+                    )}
+                  >
+                    {vehicle.sensors.battery.toFixed(2)}V
+                  </motion.p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -223,7 +280,19 @@ export default function FleetMonitor() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Oil</p>
-                  <p className="text-sm font-medium">{vehicle.sensors.oilPressure} PSI</p>
+                  <motion.p
+                    key={`oil-${vehicle.id}-${vehicle.sensors.oilPressure}`}
+                    initial={{ scale: 1.2, color: 'var(--primary)' }}
+                    animate={{ scale: 1, color: 'inherit' }}
+                    transition={{ duration: 0.3 }}
+                    className={cn(
+                      'text-sm font-medium',
+                      vehicle.sensors.oilPressure < 30 && 'text-destructive',
+                      vehicle.sensors.oilPressure < 35 && vehicle.sensors.oilPressure >= 30 && 'text-warning'
+                    )}
+                  >
+                    {vehicle.sensors.oilPressure.toFixed(1)} PSI
+                  </motion.p>
                 </div>
               </div>
             </div>

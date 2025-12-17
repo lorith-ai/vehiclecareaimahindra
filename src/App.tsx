@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { SimulationProvider } from "@/contexts/SimulationContext";
 import { MainLayout } from "@/components/layout/MainLayout";
 import Dashboard from "./pages/Dashboard";
 import FleetMonitor from "./pages/FleetMonitor";
@@ -19,24 +20,26 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider defaultTheme="dark" storageKey="ivc-theme">
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <MainLayout>
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/fleet" element={<FleetMonitor />} />
-              <Route path="/predictions" element={<Predictions />} />
-              <Route path="/appointments" element={<Appointments />} />
-              <Route path="/agents" element={<AgentActivity />} />
-              <Route path="/analytics" element={<Analytics />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </MainLayout>
-        </BrowserRouter>
-      </TooltipProvider>
+      <SimulationProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <MainLayout>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/fleet" element={<FleetMonitor />} />
+                <Route path="/predictions" element={<Predictions />} />
+                <Route path="/appointments" element={<Appointments />} />
+                <Route path="/agents" element={<AgentActivity />} />
+                <Route path="/analytics" element={<Analytics />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </MainLayout>
+          </BrowserRouter>
+        </TooltipProvider>
+      </SimulationProvider>
     </ThemeProvider>
   </QueryClientProvider>
 );

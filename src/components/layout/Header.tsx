@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Bell, Search, ChevronRight, Home } from 'lucide-react';
+import { Bell, Search, ChevronRight, Home, Play, Pause, RotateCcw, Zap, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,12 +13,17 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { useSimulation } from '@/contexts/SimulationContext';
+import { cn } from '@/lib/utils';
 
 const pageTitles: Record<string, string> = {
   '/': 'Dashboard',
@@ -39,6 +44,7 @@ const notifications = [
 export function Header() {
   const location = useLocation();
   const [searchFocused, setSearchFocused] = useState(false);
+  const { state: simState, start, stop, reset, setSpeed, injectFailure, getVehicles } = useSimulation();
 
   const currentPage = pageTitles[location.pathname] || 'Dashboard';
 
@@ -73,6 +79,103 @@ export function Header() {
 
         {/* Right: Actions */}
         <div className="flex items-center gap-3">
+          {/* Simulation Controls */}
+          <div className="flex items-center gap-2 border-r border-border pr-3">
+            {/* Play/Pause */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => simState.isRunning ? stop() : start()}
+              className="h-9 w-9"
+            >
+              {simState.isRunning ? (
+                <Pause className="w-4 h-4" />
+              ) : (
+                <Play className="w-4 h-4" />
+              )}
+            </Button>
+
+            {/* Speed Control */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-9 gap-1">
+                  <Zap className="w-3.5 h-3.5" />
+                  <span className="text-xs">{simState.speed}x</span>
+                  <ChevronDown className="w-3 h-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Simulation Speed</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {[1, 2, 5, 10].map((speed) => (
+                  <DropdownMenuItem
+                    key={speed}
+                    onClick={() => setSpeed(speed)}
+                    className={cn(simState.speed === speed && 'bg-accent')}
+                  >
+                    {speed}x Speed
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Reset */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={reset}
+              className="h-9 w-9"
+              title="Reset Simulation"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </Button>
+
+            {/* Inject Failure */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-9 gap-1 text-destructive hover:text-destructive">
+                  <Zap className="w-3.5 h-3.5" />
+                  <span className="text-xs">Inject</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuLabel>Inject Failure</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {getVehicles().slice(0, 5).map((vehicle) => (
+                  <DropdownMenuSub key={vehicle.id}>
+                    <DropdownMenuSubTrigger className="text-xs">
+                      {vehicle.id}
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuItem onClick={() => injectFailure(vehicle.id, 'brake')}>
+                        Brake Failure
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => injectFailure(vehicle.id, 'engine')}>
+                        Engine Overheat
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => injectFailure(vehicle.id, 'battery')}>
+                        Battery Failure
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => injectFailure(vehicle.id, 'oil')}>
+                        Oil Pressure Drop
+                      </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Status Indicator */}
+            {simState.isRunning && (
+              <motion.div
+                animate={{ opacity: [1, 0.5, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+                className="w-2 h-2 rounded-full bg-success"
+                title="Simulation Running"
+              />
+            )}
+          </div>
+
           {/* Notifications */}
           <Popover>
             <PopoverTrigger asChild>
